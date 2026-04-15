@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CODEX — AI Coding Agent</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #080c10;
+    --surface: #0d1117;
+    --border: #1c2333;
+    --border-bright: #2d3f5c;
+    --accent: #00d4ff;
+    --accent2: #7c3aed;
+    --success: #00ff88;
+    --warn: #ffaa00;
+    --error: #ff4455;
+    --text: #e6edf3;
+    --muted: #6e7681;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* GRID BACKGROUND */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .shell {
+    position: relative;
+    z-index: 1;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 24px 16px 80px;
+  }
+
+  /* HEADER */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 0 32px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 32px;
+  }
+
+  .logo {
+    font-family: var(--sans);
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: 4px;
+    color: var(--accent);
+    text-transform: uppercase;
+    position: relative;
+  }
+  .logo span { color: var(--muted); font-weight: 400; }
+
+  .status-bar {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 6px var(--success);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* REPO CONFIG */
+  .config-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  input, textarea {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 10px 14px;
+    border-radius: 6px;
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+  input:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(0,212,255,0.08);
+  }
+  input::placeholder, textarea::placeholder { color: var(--muted); }
+
+  textarea {
+    resize: vertical;
+    min-height: 100px;
+    line-height: 1.6;
+  }
+
+  /* TASK TYPE SELECTOR */
+  .task-types {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .task-btn {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+  .task-btn:hover { border-color: var(--border-bright); color: var(--text); }
+  .task-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0,212,255,0.06);
+  }
+
+  /* ACTION BUTTONS */
+  .actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    padding: 11px 22px;
+    border-radius: 6px;
+    border: none;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-primary {
+    background: var(--accent);
+    color: var(--bg);
+  }
+  .btn-primary:hover:not(:disabled) {
+    box-shadow: 0 0 20px rgba(0,212,255,0.4);
+    transform: translateY(-1px);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border-bright);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    font-size: 11px;
+    padding: 8px 14px;
+  }
+  .btn-ghost:hover:not(:disabled) { color: var(--text); border-color: var(--border-bright); }
+
+  /* PIPELINE STAGES */
+  .pipeline {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 28px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .stage {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+    position: relative;
+    transition: all 0.3s;
+  }
+  .stage:first-child { border-radius: 6px 0 0 6px; }
+  .stage:last-child { border-radius: 0 6px 6px 0; }
+  .stage + .stage { border-left: none; }
+
+  .stage.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0,212,255,0.05);
+  }
+  .stage.done {
+    border-color: var(--success);
+    color: var(--success);
+    background: rgba(0,255,136,0.04);
+  }
+  .stage.error {
+    border-color: var(--error);
+    color: var(--error);
+  }
+
+  .stage-icon { font-size: 13px; }
+
+  /* OUTPUT PANELS */
+  .panels {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(255,255,255,0.02);
+  }
+
+  .panel-title {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel-badge {
+    font-size: 9px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    border: 1px solid;
+    letter-spacing: 1px;
+  }
+  .badge-groq { color: #f97316; border-color: #f97316; }
+  .badge-gemini { color: #4285f4; border-color: #4285f4; }
+  .badge-judge { color: var(--accent2); border-color: var(--accent2); }
+  .badge-context { color: var(--success); border-color: var(--success); }
+
+  .panel-body {
+    padding: 16px;
+    font-size: 12px;
+    line-height: 1.7;
+    min-height: 80px;
+    color: var(--text);
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  /* CODE BLOCK */
+  .code-block {
+    background: #010409;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px;
+    font-size: 12px;
+    line-height: 1.6;
+    overflow-x: auto;
+    white-space: pre;
+    color: #79c0ff;
+    margin-top: 8px;
+  }
+
+  /* FILE TREE */
+  .file-tree {
+    font-size: 12px;
+    line-height: 1.8;
+  }
+  .file-tree .dir { color: var(--accent); }
+  .file-tree .file { color: var(--muted); }
+  .file-tree .file:hover { color: var(--text); cursor: pointer; }
+
+  /* LOG */
+  .log-line {
+    font-size: 11px;
+    line-height: 1.8;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    padding: 3px 0;
+    display: flex;
+    gap: 10px;
+  }
+  .log-time { color: var(--muted); min-width: 55px; }
+  .log-msg { color: var(--text); }
+  .log-line.info .log-msg { color: var(--text); }
+  .log-line.success .log-msg { color: var(--success); }
+  .log-line.warn .log-msg { color: var(--warn); }
+  .log-line.error .log-msg { color: var(--error); }
+
+  /* DIFF VIEW */
+  .diff-add { color: var(--success); background: rgba(0,255,136,0.05); padding: 1px 4px; display: block; }
+  .diff-del { color: var(--error); background: rgba(255,68,85,0.05); padding: 1px 4px; display: block; text-decoration: line-through; }
+  .diff-ctx { color: var(--muted); padding: 1px 4px; display: block; }
+
+  /* EMPTY STATE */
+  .empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 32px;
+    color: var(--muted);
+    font-size: 12px;
+    text-align: center;
+  }
+  .empty-icon { font-size: 28px; opacity: 0.4; }
+
+  /* SPINNER */
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid rgba(0,212,255,0.2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* COPY BTN */
+  .copy-btn {
+    font-size: 10px;
+    padding: 3px 9px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: var(--mono);
+    transition: all 0.2s;
+  }
+  .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 2px; }
+
+  /* SECTION LABEL */
+  .section-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  @media (max-width: 640px) {
+    .two-col { grid-template-columns: 1fr; }
+    .config-row { grid-template-columns: 1fr; }
+    .pipeline { gap: 4px; }
+    .stage { padding: 6px 10px; font-size: 9px; }
+  }
+
+  /* TOAST */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border-bright);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 10px 18px;
+    border-radius: 6px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: all 0.3s;
+    z-index: 100;
+    pointer-events: none;
+  }
+  #toast.show { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">CODEX <span>// AI Agent</span></div>
+    <div class="status-bar">
+      <div class="dot"></div>
+      <span id="status-text">READY</span>
+    </div>
+  </header>
+
+  <!-- REPO CONFIG -->
+  <div class="section-label">Repository</div>
+  <div class="config-row" style="margin-bottom:10px">
+    <div class="field">
+      <label>GitHub Repo (owner/repo)</label>
+      <input type="text" id="repo-input" placeholder="e.g. yourname/forge-app" />
+    </div>
+    <div class="field" style="justify-content:flex-end">
+      <label>&nbsp;</label>
+      <button class="btn btn-secondary" onclick="summarizeRepo()">
+        <span>⚡</span> Summarize
+      </button>
+    </div>
+  </div>
+
+  <!-- TASK TYPE -->
+  <div class="section-label" style="margin-top:20px">Task Type</div>
+  <div class="task-types">
+    <button class="task-btn active" onclick="selectTask(this,'feature')">✦ New Feature</button>
+    <button class="task-btn" onclick="selectTask(this,'bugfix')">⚠ Bug Fix</button>
+    <button class="task-btn" onclick="selectTask(this,'refactor')">↺ Refactor</button>
+    <button class="task-btn" onclick="selectTask(this,'review')">◉ Code Review</button>
+    <button class="task-btn" onclick="selectTask(this,'explain')">? Explain</button>
+  </div>
+
+  <!-- PROMPT -->
+  <div class="section-label">Prompt</div>
+  <div class="field" style="margin-bottom:16px">
+    <textarea id="prompt-input" placeholder="Describe exactly what you want. Be specific about files, behavior, edge cases.&#10;&#10;Tip: Use 'Summarize Repo' first, paste the summary into ChatGPT, then paste the refined prompt here."></textarea>
+  </div>
+
+  <!-- ACTIONS -->
+  <div class="actions">
+    <button class="btn btn-primary" id="run-btn" onclick="runAgent()">
+      <span>▶</span> Run Agent
+    </button>
+    <button class="btn btn-ghost" onclick="clearAll()">✕ Clear</button>
+    <button class="btn btn-ghost" onclick="copyContext()">⧉ Copy Context</button>
+  </div>
+
+  <!-- PIPELINE STAGES -->
+  <div class="pipeline" id="pipeline">
+    <div class="stage" id="stage-context"><span class="stage-icon">📦</span> Context</div>
+    <div class="stage" id="stage-route"><span class="stage-icon">⚡</span> Route</div>
+    <div class="stage" id="stage-architect"><span class="stage-icon">🏗</span> Architect</div>
+    <div class="stage" id="stage-coder"><span class="stage-icon">⌨</span> Coder</div>
+    <div class="stage" id="stage-reviewer"><span class="stage-icon">◉</span> Review</div>
+    <div class="stage" id="stage-patch"><span class="stage-icon">✂</span> Patch</div>
+    <div class="stage" id="stage-done"><span class="stage-icon">✓</span> Done</div>
+  </div>
+
+  <!-- OUTPUT PANELS -->
+  <div class="panels">
+
+    <!-- LOG -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">⬡ Agent Log</div>
+        <button class="copy-btn" onclick="copyEl('log-body')">copy</button>
+      </div>
+      <div class="panel-body" id="log-body">
+        <div class="empty"><div class="empty-icon">▸</div><div>Run the agent to see live output</div></div>
+      </div>
+    </div>
+
+    <!-- CONTEXT PANEL -->
+    <div class="panel" id="context-panel" style="display:none">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span class="panel-badge badge-context">GITHUB</span>
+          Repo Context
+        </div>
+        <button class="copy-btn" onclick="copyEl('context-body')">copy</button>
+      </div>
+      <div class="panel-body" id="context-body"></div>
+    </div>
+
+    <!-- TWO COL: ARCHITECT + CODER -->
+    <div class="two-col" id="swarm-panels" style="display:none">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span class="panel-badge badge-gemini">GEMINI</span>
+            Architect Plan
+          </div>
+          <button class="copy-btn" onclick="copyEl('architect-body')">copy</button>
+        </div>
+        <div class="panel-body" id="architect-body"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span class="panel-badge badge-groq">GROQ</span>
+            Coder Output
+          </div>
+          <button class="copy-btn" onclick="copyEl('coder-body')">copy</button>
+        </div>
+        <div class="panel-body" id="coder-body"></div>
+      </div>
+    </div>
+
+    <!-- REVIEWER -->
+    <div class="panel" id="reviewer-panel" style="display:none">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span class="panel-badge badge-groq">GROQ</span>
+          Code Review
+        </div>
+        <button class="copy-btn" onclick="copyEl('reviewer-body')">copy</button>
+      </div>
+      <div class="panel-body" id="reviewer-body"></div>
+    </div>
+
+    <!-- FINAL OUTPUT -->
+    <div class="panel" id="final-panel" style="display:none">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span class="panel-badge badge-judge">JUDGE</span>
+          Final Implementation
+        </div>
+        <button class="copy-btn" onclick="copyEl('final-body')">copy</button>
+      </div>
+      <div class="panel-body" id="final-body"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+let currentTask = 'feature';
+let repoContext = null;
+let running = false;
+
+// ─── TASK SELECT ───
+function selectTask(el, type) {
+  document.querySelectorAll('.task-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  currentTask = type;
+}
+
+// ─── STAGE MANAGEMENT ───
+function setStage(id, state) {
+  const el = document.getElementById('stage-' + id);
+  if (!el) return;
+  el.className = 'stage ' + state;
+}
+function resetStages() {
+  ['context','route','architect','coder','reviewer','patch','done'].forEach(s => setStage(s, ''));
+}
+
+// ─── LOG ───
+function initLog() {
+  document.getElementById('log-body').innerHTML = '';
+}
+function log(msg, type = 'info') {
+  const body = document.getElementById('log-body');
+  const time = new Date().toLocaleTimeString('en',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const line = document.createElement('div');
+  line.className = 'log-line ' + type;
+  line.innerHTML = `<span class="log-time">${time}</span><span class="log-msg">${msg}</span>`;
+  body.appendChild(line);
+  body.scrollTop = body.scrollHeight;
+}
+
+// ─── SUMMARIZE REPO ───
+async function summarizeRepo() {
+  const repo = document.getElementById('repo-input').value.trim();
+  if (!repo) { toast('Enter a repo e.g. yourname/forge-app'); return; }
+  initLog();
+  resetStages();
+  setStage('context', 'active');
+  log('Fetching repo structure from GitHub...');
+  document.getElementById('context-panel').style.display = 'none';
+
+  try {
+    const res = await fetch('/api/summarize', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ repo })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Summarize failed');
+
+    repoContext = data;
+    setStage('context', 'done');
+    log('Repo context built successfully', 'success');
+
+    const cb = document.getElementById('context-body');
+    cb.innerHTML = `<div class="file-tree">${renderFileTree(data.files)}</div>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px;letter-spacing:1px">SUMMARY</div>
+        <div style="font-size:12px;line-height:1.7">${esc(data.summary)}</div>
+      </div>`;
+    document.getElementById('context-panel').style.display = '';
+
+    toast('Repo summarized — paste into ChatGPT for prompt generation');
+  } catch (e) {
+    setStage('context', 'error');
+    log('Error: ' + e.message, 'error');
+    toast('Summarize failed: ' + e.message);
+  }
+}
+
+function renderFileTree(files) {
+  if (!files || !files.length) return '<span style="color:var(--muted)">No files found</span>';
+  return files.map(f => {
+    const isDir = f.endsWith('/');
+    return `<div class="${isDir ? 'dir' : 'file'}">${isDir ? '📁' : '📄'} ${esc(f)}</div>`;
+  }).join('');
+}
+
+// ─── RUN AGENT ───
+async function runAgent() {
+  if (running) return;
+  const repo = document.getElementById('repo-input').value.trim();
+  const prompt = document.getElementById('prompt-input').value.trim();
+  if (!repo) { toast('Enter a repo first'); return; }
+  if (!prompt) { toast('Enter a prompt'); return; }
+
+  running = true;
+  document.getElementById('run-btn').disabled = true;
+  document.getElementById('status-text').textContent = 'RUNNING';
+
+  initLog();
+  resetStages();
+  ['context-panel','swarm-panels','reviewer-panel','final-panel'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+
+  try {
+    // STEP 1: Context
+    setStage('context', 'active');
+    log('Building repo context...');
+    if (!repoContext) {
+      const res = await fetch('/api/summarize', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ repo })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Context failed');
+      repoContext = data;
+    }
+    setStage('context', 'done');
+    log('Context ready — ' + (repoContext.files?.length || 0) + ' files indexed', 'success');
+
+    // Show context panel
+    const cb = document.getElementById('context-body');
+    cb.innerHTML = `<div class="file-tree">${renderFileTree(repoContext.files)}</div>`;
+    document.getElementById('context-panel').style.display = '';
+
+    // STEP 2: Route
+    setStage('route', 'active');
+    log('Routing task type: ' + currentTask.toUpperCase());
+    await delay(400);
+    setStage('route', 'done');
+
+    // STEP 3 + 4: Architect + Coder (parallel)
+    setStage('architect', 'active');
+    setStage('coder', 'active');
+    log('Dispatching to Architect (Gemini) and Coder (Groq) in parallel...');
+    document.getElementById('swarm-panels').style.display = '';
+    document.getElementById('architect-body').innerHTML = '<div class="spinner"></div>';
+    document.getElementById('coder-body').innerHTML = '<div class="spinner"></div>';
+
+    const res = await fetch('/api/run-task', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ repo, prompt, taskType: currentTask, context: repoContext })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Agent run failed');
+
+    setStage('architect', 'done');
+    setStage('coder', 'done');
+    log('Architect plan received', 'success');
+    log('Coder implementation received', 'success');
+
+    document.getElementById('architect-body').innerHTML = formatOutput(data.architectPlan);
+    document.getElementById('coder-body').innerHTML = formatOutput(data.coderOutput);
+
+    // STEP 5: Reviewer
+    setStage('reviewer', 'active');
+    log('Sending to Reviewer (Groq)...');
+    document.getElementById('reviewer-panel').style.display = '';
+    document.getElementById('reviewer-body').innerHTML = '<div class="spinner"></div>';
+    document.getElementById('reviewer-body').innerHTML = formatOutput(data.reviewerOutput);
+    setStage('reviewer', 'done');
+    log('Review complete', 'success');
+
+    // STEP 6: Patch
+    setStage('patch', 'active');
+    log('Generating final patch...');
+    await delay(300);
+    setStage('patch', 'done');
+
+    // STEP 7: Final
+    setStage('done', 'done');
+    log('✓ Agent run complete', 'success');
+    document.getElementById('final-panel').style.display = '';
+    document.getElementById('final-body').innerHTML = formatOutput(data.finalOutput);
+
+    document.getElementById('status-text').textContent = 'DONE';
+    toast('Agent completed successfully');
+
+  } catch (e) {
+    log('✕ ' + e.message, 'error');
+    document.getElementById('status-text').textContent = 'ERROR';
+    toast('Error: ' + e.message);
+  } finally {
+    running = false;
+    document.getElementById('run-btn').disabled = false;
+  }
+}
+
+// ─── HELPERS ───
+function formatOutput(text) {
+  if (!text) return '<span style="color:var(--muted)">No output</span>';
+  // Detect code blocks
+  const escaped = text.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return escaped.replace(/```[\w]*\n?([\s\S]*?)```/g, (_, code) =>
+    `<div class="code-block">${code.trim()}</div>`
+  ).replace(/\n/g, '<br>');
+}
+
+function esc(s) {
+  return String(s).replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function clearAll() {
+  document.getElementById('prompt-input').value = '';
+  document.getElementById('log-body').innerHTML = '<div class="empty"><div class="empty-icon">▸</div><div>Run the agent to see live output</div></div>';
+  ['context-panel','swarm-panels','reviewer-panel','final-panel'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  resetStages();
+  repoContext = null;
+  document.getElementById('status-text').textContent = 'READY';
+}
+
+function copyContext() {
+  if (!repoContext) { toast('Summarize a repo first'); return; }
+  const text = `PROJECT CONTEXT\n\nFiles:\n${repoContext.files?.join('\n')}\n\nSummary:\n${repoContext.summary}`;
+  navigator.clipboard.writeText(text).then(() => toast('Context copied — paste into ChatGPT'));
+}
+
+function copyEl(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  navigator.clipboard.writeText(el.innerText).then(() => toast('Copied'));
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+</script>
+</body>
+</html>
