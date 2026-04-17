@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "functions": {
+    "api/run-task.js": {
+      "maxDuration": 60
+    },
+    "api/summarize.js": {
+      "maxDuration": 30
+    },
+    "api/apply-patch.js": {
+      "maxDuration": 30
+    }
+  }
+}
